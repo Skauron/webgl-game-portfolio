@@ -28,6 +28,7 @@ export class GameLoop {
     const dt = (now - this._lastTime) / 1000;
     this._lastTime = now;
     this.update(dt);
+    if (!this._running) return;
     this.render();
     this._rafId = requestAnimationFrame(this._tick);
   }

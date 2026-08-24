@@ -29,6 +29,13 @@ describe('createProgram', () => {
 
     expect(program).toBeDefined();
     expect(gl.linkProgram).toHaveBeenCalledWith(program);
+
+    const vertexShader = gl.createShader.mock.results[0].value;
+    const fragmentShader = gl.createShader.mock.results[1].value;
+    expect(gl.deleteShader).toHaveBeenCalledTimes(2);
+    expect(gl.deleteShader).toHaveBeenCalledWith(vertexShader);
+    expect(gl.deleteShader).toHaveBeenCalledWith(fragmentShader);
+    expect(gl.deleteProgram).not.toHaveBeenCalled();
   });
 
   it('throws with the driver log when shader compilation fails', () => {
@@ -45,5 +52,18 @@ describe('createProgram', () => {
     expect(() => createProgram(gl, 'vertex source', 'fragment source')).toThrow(
       'Program link failed: mock link error'
     );
+  });
+
+  it('deletes both shaders and the program when linking fails', () => {
+    const gl = createMockGL({ programLinks: false });
+
+    expect(() => createProgram(gl, 'vertex source', 'fragment source')).toThrow();
+
+    const vertexShader = gl.createShader.mock.results[0].value;
+    const fragmentShader = gl.createShader.mock.results[1].value;
+    expect(gl.deleteProgram).toHaveBeenCalledTimes(1);
+    expect(gl.deleteShader).toHaveBeenCalledTimes(2);
+    expect(gl.deleteShader).toHaveBeenCalledWith(vertexShader);
+    expect(gl.deleteShader).toHaveBeenCalledWith(fragmentShader);
   });
 });

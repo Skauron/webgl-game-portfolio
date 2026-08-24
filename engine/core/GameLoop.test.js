@@ -53,4 +53,35 @@ describe('GameLoop', () => {
     expect(update).not.toHaveBeenCalled();
     expect(render).not.toHaveBeenCalled();
   });
+
+  it('stopping from within update prevents render that frame and does not double-run after restart', () => {
+    const render = vi.fn();
+    let stopCalledOnFrame = 0;
+    const loop = new GameLoop({
+      update: () => {
+        stopCalledOnFrame += 1;
+        if (stopCalledOnFrame === 1) {
+          loop.stop();
+        }
+      },
+      render,
+    });
+
+    loop.start();
+    flushOneFrame(16); // update() calls stop() on this frame
+
+    expect(render).not.toHaveBeenCalled();
+    expect(rafCallbacks.length).toBe(0); // no orphaned rAF scheduled
+
+    // restart and confirm normal single-speed operation
+    const update2 = vi.fn();
+    const render2 = vi.fn();
+    const loop2 = new GameLoop({ update: update2, render: render2 });
+    loop2.start();
+    flushOneFrame(16);
+    flushOneFrame(16);
+
+    expect(update2).toHaveBeenCalledTimes(2);
+    expect(render2).toHaveBeenCalledTimes(2);
+  });
 });
