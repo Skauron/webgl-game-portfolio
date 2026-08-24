@@ -1,4 +1,5 @@
 import { Engine } from '../../engine/core/Engine.js';
+import { createProgram } from '../../engine/core/Shader.js';
 
 const canvas = document.querySelector('#viewport');
 
@@ -9,25 +10,54 @@ function resize() {
 resize();
 window.addEventListener('resize', resize);
 
-let hue = 0;
+const VERTEX_SOURCE = `
+  attribute vec2 aPosition;
+  void main() {
+    gl_Position = vec4(aPosition, 0.0, 1.0);
+  }
+`;
 
-function update(dt) {
-  hue = (hue + dt * 60) % 360;
+const FRAGMENT_SOURCE = `
+  precision mediump float;
+  void main() {
+    gl_FragColor = vec4(1.0, 0.4, 0.1, 1.0);
+  }
+`;
+
+const TRIANGLE_VERTICES = new Float32Array([
+  0.0, 0.6,
+  -0.6, -0.6,
+  0.6, -0.6,
+]);
+
+let drawTriangle = null;
+
+function setup(gl) {
+  const program = createProgram(gl, VERTEX_SOURCE, FRAGMENT_SOURCE);
+  const positionLocation = gl.getAttribLocation(program, 'aPosition');
+
+  const buffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.bufferData(gl.ARRAY_BUFFER, TRIANGLE_VERTICES, gl.STATIC_DRAW);
+
+  drawTriangle = () => {
+    gl.useProgram(program);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  };
 }
+
+function update() {}
 
 function render(gl) {
   gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-  const [r, g, b] = hslToRgb(hue / 360, 0.5, 0.5);
-  gl.clearColor(r, g, b, 1);
+  gl.clearColor(0.07, 0.07, 0.09, 1);
   gl.clear(gl.COLOR_BUFFER_BIT);
-}
-
-function hslToRgb(h, s, l) {
-  const k = (n) => (n + h * 12) % 12;
-  const a = s * Math.min(l, 1 - l);
-  const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
-  return [f(0), f(8), f(4)];
+  drawTriangle();
 }
 
 const engine = new Engine({ canvas, update, render });
+setup(engine.gl);
 engine.start();
