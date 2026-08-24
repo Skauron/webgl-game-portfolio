@@ -6,6 +6,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         demo: resolve(__dirname, 'games/demo/index.html'),
+        pacman: resolve(__dirname, 'games/pacman/index.html'),
       },
     },
   },
