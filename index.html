@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>WebGL Game Portfolio</title>
+    <style>
+      html, body {
+        margin: 0;
+        min-height: 100%;
+        background: #0b0b0f;
+        color: #fff;
+        font-family: sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      main {
+        max-width: 560px;
+        padding: 40px 24px;
+        text-align: center;
+      }
+      h1 {
+        font-size: 22px;
+        margin-bottom: 8px;
+      }
+      p {
+        color: #aaa;
+        margin-bottom: 32px;
+      }
+      .games {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      a.card {
+        display: block;
+        width: 200px;
+        padding: 24px 16px;
+        border: 1px solid #333;
+        border-radius: 8px;
+        color: #fff;
+        text-decoration: none;
+        background: #16161d;
+        transition: border-color 0.15s;
+      }
+      a.card:hover {
+        border-color: #6c6cff;
+      }
+      a.card span {
+        display: block;
+        font-size: 14px;
+        color: #888;
+        margin-top: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>WebGL Game Portfolio</h1>
+      <p>Raw WebGL, hand-rolled JS game engine — no frameworks.</p>
+      <div class="games">
+        <a class="card" href="games/demo/">Engine v0<span>WebGL smoke test</span></a>
+        <a class="card" href="games/pacman/">Pacman<span>Game #1</span></a>
+      </div>
+    </main>
+  </body>
+</html>
