@@ -67,11 +67,19 @@ worth understanding.
 
 ## Testing
 
-No unit tests at this milestone — WebGL draw output isn't meaningfully
-unit-testable without a real browser/GPU context. Validation is manual: run
-`vite`, open `games/demo/`, confirm the triangle renders. Later milestones may
-add Spector.js / DevTools GPU panel checks (per `CLAUDE.md` step 5), not unit
-tests.
+No unit tests for anything requiring a real GPU/browser WebGL context —
+`GLContext` and the demo's draw call aren't meaningfully unit-testable
+without one. Those are validated manually: run `vite`, open `games/demo/`,
+confirm the triangle renders. Later milestones may add Spector.js / DevTools
+GPU panel checks (per `CLAUDE.md` step 5) for this class of check.
+
+Pieces that don't need a real GPU do get real unit tests: `GameLoop`'s
+timing logic (mocking `requestAnimationFrame`/`performance.now`, no `gl`
+involved) and `Shader`'s compile/link/cleanup logic (against a fully mocked
+`gl` object, exercising the real success/compile-failure/link-failure
+branches). This distinction — GPU-bound code is manually verified, pure
+logic is unit-tested — held for the whole Engine v0 implementation and is
+the rule going forward for later milestones' engine code.
 
 ## Out of Scope (future milestones, not this spec)
 
