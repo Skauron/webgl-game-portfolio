@@ -40,6 +40,7 @@ const scoreEl = document.querySelector('#score');
 const statusEl = document.querySelector('#status');
 const overlayEl = document.querySelector('#overlay');
 const overlayMessageEl = document.querySelector('#overlay-message');
+const countdownEl = document.querySelector('#countdown');
 const upButtonEl = document.querySelector('#btn-up');
 const downButtonEl = document.querySelector('#btn-down');
 
@@ -71,6 +72,15 @@ function showOverlay(message) {
 
 function updateScore(score) {
   scoreEl.textContent = `${score.left} — ${score.right}`;
+}
+
+function setCountdown(value) {
+  if (value) {
+    countdownEl.textContent = value;
+    countdownEl.classList.add('visible');
+  } else {
+    countdownEl.classList.remove('visible');
+  }
 }
 
 function setDirection(dir) {
@@ -124,9 +134,11 @@ const socket = connect(WS_URL, {
     } else if (message.type === 'state') {
       latestState = message;
       updateScore(message.score);
+      setCountdown(message.countdown);
       detectPaddleHit(message.ball.x, message.ball.y);
     } else if (message.type === 'gameover') {
       updateScore(message.score);
+      setCountdown(null);
       const youWon = message.winner === mySide;
       showOverlay(youWon ? 'You Win! Reload to play again.' : 'You Lose. Reload to play again.');
     } else if (message.type === 'opponent-left') {
@@ -182,7 +194,11 @@ function render(gl) {
     const brightness = ((index + 1) / ballTrail.length) * 0.4;
     drawGlow(point.x + BALL_SIZE / 2, point.y + BALL_SIZE / 2, BALL_TRAIL_GLOW_SIZE, BALL_COLOR, brightness);
   });
-  drawGlow(ball.x + BALL_SIZE / 2, ball.y + BALL_SIZE / 2, BALL_GLOW_SIZE, BALL_COLOR, 1.0);
+  // Soft halo behind a crisp, solid ball — a pure glow quad alone (no hard
+  // core) read as an undefined blur at this size, so the actual ball is a
+  // flat quad drawn on top of a dimmer, larger glow quad for the aura.
+  drawGlow(ball.x + BALL_SIZE / 2, ball.y + BALL_SIZE / 2, BALL_GLOW_SIZE, BALL_COLOR, 0.5);
+  drawQuad(ball.x, ball.y, BALL_SIZE, BALL_SIZE, BALL_COLOR);
 
   drawSparks(sparks);
 }

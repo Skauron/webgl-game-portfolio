@@ -16,6 +16,7 @@ import {
 const TICK_RATE = 30;
 const TICK_INTERVAL_MS = 1000 / TICK_RATE;
 const TICK_DT = 1 / TICK_RATE;
+const COUNTDOWN_DURATION = 3; // seconds, before match start and before each re-serve
 
 function serveBall() {
   const angle = (Math.random() * 0.5 - 0.25) * Math.PI; // -45deg..+45deg
@@ -39,6 +40,7 @@ export class Match {
     this.ball = serveBall();
     this.score = { left: 0, right: 0 };
     this.tick = 0;
+    this.countdown = COUNTDOWN_DURATION;
     this.onEnd = onEnd;
     this.intervalId = null;
 
@@ -79,22 +81,30 @@ export class Match {
     this.tick += 1;
     movePaddle(this.paddles.left, this.directions.left, TICK_DT);
     movePaddle(this.paddles.right, this.directions.right, TICK_DT);
-    moveBall(this.ball, TICK_DT);
-    resolveWallBounce(this.ball);
-    resolvePaddleCollision(this.ball, this.paddles.left, 'left');
-    resolvePaddleCollision(this.ball, this.paddles.right, 'right');
 
-    const scoringSide = checkScoring(this.ball);
-    if (scoringSide) {
-      this.score[scoringSide] += 1;
-      this.ball = serveBall();
-    }
+    if (this.countdown > 0) {
+      // Ball stays frozen at its served position — paddles can still move,
+      // but nothing scores or bounces until the countdown reaches zero.
+      this.countdown = Math.max(0, this.countdown - TICK_DT);
+    } else {
+      moveBall(this.ball, TICK_DT);
+      resolveWallBounce(this.ball);
+      resolvePaddleCollision(this.ball, this.paddles.left, 'left');
+      resolvePaddleCollision(this.ball, this.paddles.right, 'right');
 
-    if (this.score.left >= WIN_SCORE || this.score.right >= WIN_SCORE) {
-      const winner = this.score.left >= WIN_SCORE ? 'left' : 'right';
-      this._broadcast({ type: 'gameover', winner, score: this.score });
-      this._end();
-      return;
+      const scoringSide = checkScoring(this.ball);
+      if (scoringSide) {
+        this.score[scoringSide] += 1;
+        this.ball = serveBall();
+        this.countdown = COUNTDOWN_DURATION;
+      }
+
+      if (this.score.left >= WIN_SCORE || this.score.right >= WIN_SCORE) {
+        const winner = this.score.left >= WIN_SCORE ? 'left' : 'right';
+        this._broadcast({ type: 'gameover', winner, score: this.score });
+        this._end();
+        return;
+      }
     }
 
     this._broadcast({
@@ -103,6 +113,7 @@ export class Match {
       ball: { x: this.ball.x, y: this.ball.y },
       paddles: { left: this.paddles.left.y, right: this.paddles.right.y },
       score: this.score,
+      countdown: this.countdown > 0 ? Math.ceil(this.countdown) : null,
     });
   }
 

@@ -51,6 +51,21 @@
       #overlay.visible {
         display: flex;
       }
+      #countdown {
+        position: absolute;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        font-size: 15vh;
+        font-weight: bold;
+        color: #fff;
+        text-shadow: 0 0 16px rgba(255, 255, 255, 0.7);
+        pointer-events: none;
+      }
+      #countdown.visible {
+        display: flex;
+      }
       #touch-controls {
         display: none;
         position: fixed;
@@ -112,6 +127,7 @@
       <div id="overlay">
         <div id="overlay-message"></div>
       </div>
+      <div id="countdown"></div>
     </div>
     <div id="touch-controls">
       <button class="touch-btn" id="btn-up">▲</button>

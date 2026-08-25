@@ -39,11 +39,20 @@ server" message rather than looking frozen.
 - Ball glow + trail: a second shader (`games/pong/glowRenderer.js`) applies
   a real orthographic projection matrix (`engine/core/mat4.js`, the same
   technique used for Invaders' explosions, now in a second game) and a
-  `smoothstep` radial falloff for a soft neon look, with 6 fading afterimage
-  quads trailing the ball for a motion streak. The trail is cleared instead
-  of drawn across the frame a point is scored (detected client-side as a
-  position jump too large to be real movement), so a re-serve doesn't draw
-  a streak across the whole court.
+  `smoothstep` radial falloff for a soft neon halo, with 6 fading afterimage
+  quads trailing the ball for a motion streak. A glow quad alone read as an
+  undefined blur at this size, so the ball itself is a flat, crisp quad
+  drawn on top of a dimmer, larger glow quad behind it — solid core, soft
+  aura. The trail is cleared instead of drawn across the frame a point is
+  scored (detected client-side as a position jump too large to be real
+  movement), so a re-serve doesn't draw a streak across the whole court.
+- Serve countdown: the server freezes the ball (paddles can still move) for
+  3 seconds before the first serve and before every re-serve after a point,
+  broadcasting the remaining whole seconds as a `countdown` field on each
+  `state` message (`server/match.js`). The client just renders that number
+  full-screen — since the ball's position is genuinely frozen server-side
+  during the countdown, the client's normal lerp-toward-server-state logic
+  holds it still with no extra client-side pause logic needed.
 - Paddle-hit sparks: the client has no collision events, only a ball
   position each tick — so a paddle hit is *inferred* by watching the
   server's ball.x for a horizontal-direction reversal near a paddle's line
