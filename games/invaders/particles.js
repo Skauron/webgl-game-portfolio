@@ -1,4 +1,4 @@
-export const PARTICLE_COUNT = 16;
+export const PARTICLE_COUNT = 10;
 export const PARTICLE_LIFE = 0.5;
 export const PARTICLE_SPEED_MIN = 40;
 export const PARTICLE_SPEED_MAX = 120;
