@@ -55,18 +55,35 @@ function setDirection(dir) {
   socket.sendInput(dir);
 }
 
+const COLD_START_MESSAGE_DELAY = 3000; // ms
+
+let connectionOpened = false;
+
+const coldStartTimer = setTimeout(() => {
+  if (!connectionOpened) {
+    setStatus('Waking the server (free hosting can take up to a minute)…');
+  }
+}, COLD_START_MESSAGE_DELAY);
+
 const socket = connect(WS_URL, {
-  onOpen: () => setStatus('Connected'),
+  onOpen: () => {
+    connectionOpened = true;
+    clearTimeout(coldStartTimer);
+    setStatus('Connected');
+  },
   onMessage: (message) => {
     if (message.type === 'waiting') {
       setStatus('Waiting for an opponent…');
+      showOverlay('Waiting for an opponent — open this page in a second tab, or share the link with someone to play.');
     } else if (message.type === 'matched') {
       mySide = message.side;
       setStatus(`Playing as ${mySide}`);
+      overlayEl.classList.remove('visible');
     } else if (message.type === 'state') {
       latestState = message;
       updateScore(message.score);
     } else if (message.type === 'gameover') {
+      updateScore(message.score);
       const youWon = message.winner === mySide;
       showOverlay(youWon ? 'You Win! Reload to play again.' : 'You Lose. Reload to play again.');
     } else if (message.type === 'opponent-left') {

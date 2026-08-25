@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig, configDefaults } from 'vitest/config';
 import { resolve } from 'node:path';
 
 export default defineConfig({
@@ -13,5 +13,8 @@ export default defineConfig({
         pong: resolve(__dirname, 'games/pong/index.html'),
       },
     },
+  },
+  test: {
+    exclude: [...configDefaults.exclude, 'server/**'],
   },
 });

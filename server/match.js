@@ -92,7 +92,7 @@ export class Match {
 
     if (this.score.left >= WIN_SCORE || this.score.right >= WIN_SCORE) {
       const winner = this.score.left >= WIN_SCORE ? 'left' : 'right';
-      this._broadcast({ type: 'gameover', winner });
+      this._broadcast({ type: 'gameover', winner, score: this.score });
       this._end();
       return;
     }
