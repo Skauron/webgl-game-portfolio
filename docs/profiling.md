@@ -39,6 +39,31 @@ This is the before/after portfolio reviewers can ask for: the numbers in
 this table came from watching the actual instrumented games run, not
 estimated from source.
 
+### Spector.js captures
+
+The instrumentation numbers above are corroborated by an actual Spector.js
+capture per game — the real tool named in the requirements above, captured
+after the instrumentation pass. Each screenshot shows Spector.js's full GL
+command list for one captured frame, with a stack trace confirming the
+calls originate from this repo's own render code:
+
+- [`spector-pacman.png`](screenshots/spector-pacman.png) — 96 total GL
+  commands in the captured frame (draw calls, buffer/uniform updates, state
+  changes combined — not just `drawArrays`).
+- [`spector-invaders.png`](screenshots/spector-invaders.png) — 75 total GL
+  commands; stack trace resolves to `games/invaders/main.js:231` →
+  `engine/core/GameLoop.js:10`.
+- [`spector-pong.png`](screenshots/spector-pong.png) — 112 total GL
+  commands, captured mid-match against a live opponent; stack trace
+  resolves to `games/pong/main.js:161` → `engine/core/GameLoop.js:10` →
+  `engine/core/GameLoop.js:32`.
+
+These totals count every GL API call Spector.js logged for the frame
+(`useProgram`, `bindBuffer`, `bufferData`, `drawArrays`, etc.), not just
+draw calls, so they're a larger number than the per-frame `drawArrays`
+counts in the table above — the two metrics measure different things, both
+real.
+
 ## Per-game audit
 
 | Game | Before | Bottleneck found | Action |
