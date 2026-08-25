@@ -4,10 +4,11 @@ export function loadTexture(gl, url) {
     image.onload = () => {
       const texture = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, texture);
-      // WebGL uploads row 0 of the source image to the BOTTOM of the
-      // texture by default; flipping here makes v=0 correspond to the
-      // top of the image, matching how the sprite bitmaps were authored.
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      // Renderers using this texture pair UV v=0 with the top of the
+      // on-screen quad (see games/invaders/renderer.js's toNDC/drawSprite).
+      // With FLIP_Y left at its default (false), image row 0 (the visual
+      // top of the source PNG) uploads to texel row 0 = v=0, which is
+      // exactly the pairing that convention needs — no flip required.
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
