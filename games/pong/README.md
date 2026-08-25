@@ -28,6 +28,16 @@ server" message rather than looking frozen.
   snapshot, since the client has no input to predict them from. Full
   input-buffer-and-replay netcode (competitive-shooter grade) was
   deliberately skipped — over-engineered for a single 1D paddle value.
+- Framerate-independent smoothing (`games/pong/predict.js`'s
+  `smoothedFactor`): a lerp factor tuned as "correction strength per server
+  tick" and applied directly once per *render* frame compounds faster than
+  intended whenever the client renders more often than the server ticks —
+  at 60fps (2 renders per 30Hz tick) the same lerp got applied twice before
+  the target updated, at 120fps four times, over-correcting and reading as
+  jittery paddle motion that got worse on higher-refresh-rate monitors.
+  `smoothedFactor` rescales the per-frame factor by elapsed `dt` so the
+  *total* correction over one tick's worth of wall-clock time stays
+  constant no matter the render frame rate.
 - Angle-based paddle physics: ball return angle depends on where it hits
   the paddle (offset from center, normalized, scaled into outgoing
   velocity) — the one non-trivial physics touch, matching the original
@@ -79,7 +89,9 @@ broadcasts the result. On the client, `games/pong/main.js` wires
 reflection, scoring) is unit-tested with Node's built-in `node:test` —
 kept separate from the root Vitest suite so `server/`'s dependency list
 stays at just `ws`. `games/pong/predict.js` (local prediction math, the
-`lerp` helper) is unit-tested with the existing Vitest suite
+`lerp` helper, and `smoothedFactor`'s framerate-independence — same total
+correction whether applied once at the reference dt or split across
+several smaller-dt frames) is unit-tested with the existing Vitest suite
 (`npm test`). Real sockets, timers, WebGL, and DOM are manual-only:
 verified with two browser tabs playing a full match to 5 points, plus a
 forced disconnect to confirm the `opponent-left` path, against both a

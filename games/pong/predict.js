@@ -15,3 +15,14 @@ export function predictPaddle(paddle, direction, dt) {
 export function lerp(current, target, factor) {
   return current + (target - current) * factor;
 }
+
+// Rescales a "correction strength per referenceDt" into the equivalent
+// factor for an arbitrary elapsed dt, so that applying it once per render
+// frame converges at the same total rate regardless of the client's frame
+// rate — a constant per-frame factor applied every rAF tick compounds
+// faster on higher-refresh-rate displays (it gets applied more often per
+// unit of wall-clock time), which reads as an over-corrected, jittery pull
+// against local prediction instead of a steady one.
+export function smoothedFactor(perReferenceFactor, dt, referenceDt) {
+  return 1 - Math.pow(1 - perReferenceFactor, dt / referenceDt);
+}
