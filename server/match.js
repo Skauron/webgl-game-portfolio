@@ -82,6 +82,8 @@ export class Match {
     movePaddle(this.paddles.left, this.directions.left, TICK_DT);
     movePaddle(this.paddles.right, this.directions.right, TICK_DT);
 
+    let paddleHit = null;
+
     if (this.countdown > 0) {
       // Ball stays frozen at its served position — paddles can still move,
       // but nothing scores or bounces until the countdown reaches zero.
@@ -89,8 +91,9 @@ export class Match {
     } else {
       moveBall(this.ball, TICK_DT);
       resolveWallBounce(this.ball);
-      resolvePaddleCollision(this.ball, this.paddles.left, 'left');
-      resolvePaddleCollision(this.ball, this.paddles.right, 'right');
+      const leftHit = resolvePaddleCollision(this.ball, this.paddles.left, 'left');
+      const rightHit = resolvePaddleCollision(this.ball, this.paddles.right, 'right');
+      paddleHit = leftHit ? 'left' : rightHit ? 'right' : null;
 
       const scoringSide = checkScoring(this.ball);
       if (scoringSide) {
@@ -114,6 +117,7 @@ export class Match {
       paddles: { left: this.paddles.left.y, right: this.paddles.right.y },
       score: this.score,
       countdown: this.countdown > 0 ? Math.ceil(this.countdown) : null,
+      paddleHit,
     });
   }
 

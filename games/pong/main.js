@@ -28,6 +28,19 @@ const TICK_DT = 1 / 30;
 const RECONCILE_FACTOR = 0.2;
 const INTERP_FACTOR = 0.3;
 
+// The client and server run the identical movePaddle formula, so with no
+// packet loss the local prediction and the server's authoritative value
+// should agree except for the position the paddle covered during one
+// round-trip of network latency — that's expected lead, not drift, and
+// isn't something to correct against. Continuously blending even that
+// small, constant gap back toward a deliberately-stale server value fights
+// the local prediction on every tick, which is what made input feel heavy
+// and "off" even after the framerate-independence fix above. Below this
+// threshold, trust prediction outright; only actual desyncs (a dropped
+// input message, a missed edge case) are large enough to cross it and get
+// corrected.
+const RECONCILE_DEADZONE = 4; // px
+
 const PADDLE_COLOR = [1.0, 1.0, 1.0, 1.0];
 const BALL_COLOR = [1.0, 1.0, 1.0, 1.0];
 const CENTER_LINE_COLOR = [0.3, 0.3, 0.3, 1.0];
@@ -37,7 +50,6 @@ const BALL_TRAIL_LENGTH = 6;
 const BALL_TRAIL_GLOW_SIZE = 8;
 const BALL_TRAIL_JUMP_THRESHOLD = 100; // px — a jump this big means the ball was re-served, not moving
 
-const PADDLE_HIT_MARGIN = 20; // how close to a paddle's x-line counts as "hit it"
 const SPARK_OPTIONS = { count: 8, life: 0.3, speedMin: 60, speedMax: 160 };
 const SPARK_PALETTE = [
   [0.85, 0.95, 1.0],
@@ -64,8 +76,6 @@ const ball = { x: (COURT_WIDTH - BALL_SIZE) / 2, y: (COURT_HEIGHT - BALL_SIZE) /
 
 let ballTrail = [];
 let sparks = [];
-let previousServerBallX = null;
-let previousBallDx = 0;
 
 let drawQuad;
 let drawGlow;
@@ -98,25 +108,6 @@ function setDirection(dir) {
   socket.sendInput(dir);
 }
 
-// Detects a paddle bounce by watching the server's raw ball.x for a
-// horizontal-direction reversal near a paddle line. Wall bounces only flip
-// vy, never vx, so this can't false-positive on those — only an actual
-// paddle collision reverses x.
-function detectPaddleHit(ballX, ballY) {
-  if (previousServerBallX !== null) {
-    const dx = ballX - previousServerBallX;
-    if (previousBallDx !== 0 && Math.sign(dx) !== Math.sign(previousBallDx)) {
-      const nearLeftPaddle = ballX <= LEFT_PADDLE_X + PADDLE_WIDTH + PADDLE_HIT_MARGIN;
-      const nearRightPaddle = ballX >= RIGHT_PADDLE_X - PADDLE_HIT_MARGIN;
-      if (nearLeftPaddle || nearRightPaddle) {
-        sparks.push(...createBurst(ballX, ballY, SPARK_OPTIONS));
-      }
-    }
-    if (dx !== 0) previousBallDx = dx;
-  }
-  previousServerBallX = ballX;
-}
-
 const COLD_START_MESSAGE_DELAY = 3000; // ms
 
 let connectionOpened = false;
@@ -145,7 +136,9 @@ const socket = connect(WS_URL, {
       latestState = message;
       updateScore(message.score);
       setCountdown(message.countdown);
-      detectPaddleHit(message.ball.x, message.ball.y);
+      if (message.paddleHit) {
+        sparks.push(...createBurst(message.ball.x, message.ball.y, SPARK_OPTIONS));
+      }
     } else if (message.type === 'gameover') {
       updateScore(message.score);
       setCountdown(null);
@@ -179,10 +172,12 @@ function update(dt) {
     const serverMyY = mySide === 'left' ? latestState.paddles.left : latestState.paddles.right;
     const serverOpponentY = mySide === 'left' ? latestState.paddles.right : latestState.paddles.left;
 
-    const reconcileFactor = smoothedFactor(RECONCILE_FACTOR, dt, TICK_DT);
     const interpFactor = smoothedFactor(INTERP_FACTOR, dt, TICK_DT);
 
-    myPaddle.y = lerp(myPaddle.y, serverMyY, reconcileFactor);
+    if (Math.abs(myPaddle.y - serverMyY) > RECONCILE_DEADZONE) {
+      const reconcileFactor = smoothedFactor(RECONCILE_FACTOR, dt, TICK_DT);
+      myPaddle.y = lerp(myPaddle.y, serverMyY, reconcileFactor);
+    }
     opponentPaddle.y = lerp(opponentPaddle.y, serverOpponentY, interpFactor);
     ball.x = lerp(ball.x, latestState.ball.x, interpFactor);
     ball.y = lerp(ball.y, latestState.ball.y, interpFactor);

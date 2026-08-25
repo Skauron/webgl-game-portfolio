@@ -38,6 +38,16 @@ server" message rather than looking frozen.
   `smoothedFactor` rescales the per-frame factor by elapsed `dt` so the
   *total* correction over one tick's worth of wall-clock time stays
   constant no matter the render frame rate.
+- A reconciliation dead zone for the local paddle: since client and server
+  run the identical movement formula, the only expected gap between
+  predicted and authoritative position (with no packet loss) is the
+  distance covered during one round trip of network latency — that's
+  normal lead, not drift, and continuously blending even that small,
+  constant gap back toward a stale server value fought local prediction on
+  every tick, felt heavy/spongy rather than responsive. Below a small
+  pixel threshold, prediction is trusted outright; only a real desync
+  (large enough to cross it — a dropped input message, for instance) gets
+  corrected.
 - Angle-based paddle physics: ball return angle depends on where it hits
   the paddle (offset from center, normalized, scaled into outgoing
   velocity) — the one non-trivial physics touch, matching the original
@@ -65,13 +75,19 @@ server" message rather than looking frozen.
   full-screen — since the ball's position is genuinely frozen server-side
   during the countdown, the client's normal lerp-toward-server-state logic
   holds it still with no extra client-side pause logic needed.
-- Paddle-hit sparks: the client has no collision events, only a ball
-  position each tick — so a paddle hit is *inferred* by watching the
-  server's ball.x for a horizontal-direction reversal near a paddle's line
-  (a wall bounce only flips `vy`, never `vx`, so this can't false-positive
-  on those). On a real hit, it spawns a spark burst using the same reusable
-  `engine/core/particles.js` system Invaders and Pacman use, with its own
-  white/cyan palette.
+- Paddle-hit sparks: `server/match.js` now reports which side (if any)
+  `resolvePaddleCollision` actually hit that tick as a `paddleHit` field on
+  the `state` message, and the client spawns a spark burst there using the
+  same reusable `engine/core/particles.js` system Invaders and Pacman use.
+  This replaced an earlier client-side heuristic that inferred a hit from
+  the ball's x-direction reversing near a paddle line — it worked for the
+  left paddle but silently never fired for the right one: the collision
+  snap-back repositions the ball just outside the paddle, and whether that
+  snap itself reads as a same-tick direction reversal (vs. one tick later,
+  by which point the ball had already moved back outside the detection
+  margin) depends on the snap geometry, which isn't symmetric between the
+  two paddles. Rather than tune the margin further, the server now reports
+  the real event directly — no heuristic, no asymmetry possible.
 
 ## Architecture
 
