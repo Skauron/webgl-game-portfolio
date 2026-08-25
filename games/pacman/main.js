@@ -54,6 +54,7 @@ let lives;
 let state; // 'playing' | 'gameover' | 'victory'
 let particles;
 let drawQuad;
+let drawQuadBatch;
 let drawParticles;
 let engine;
 
@@ -133,25 +134,28 @@ function render(gl) {
   gl.clear(gl.COLOR_BUFFER_BIT);
 
   const time = performance.now() / 1000;
+  const inset = CELL_SIZE * 0.35;
+  const pelletSize = CELL_SIZE - inset * 2;
 
+  const wallQuads = [];
+  const pelletQuads = [];
   for (let row = 0; row < grid.length; row += 1) {
     for (let col = 0; col < grid[row].length; col += 1) {
       const cell = grid[row][col];
       if (cell === '#') {
-        drawQuad(col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE, WALL_COLOR);
+        wallQuads.push({ x: col * CELL_SIZE, y: row * CELL_SIZE, width: CELL_SIZE, height: CELL_SIZE });
       } else if (cell === '.') {
-        const inset = CELL_SIZE * 0.35;
-        drawQuad(
-          col * CELL_SIZE + inset,
-          row * CELL_SIZE + inset,
-          CELL_SIZE - inset * 2,
-          CELL_SIZE - inset * 2,
-          PELLET_COLOR,
-          { time, pulse: 1 }
-        );
+        pelletQuads.push({
+          x: col * CELL_SIZE + inset,
+          y: row * CELL_SIZE + inset,
+          width: pelletSize,
+          height: pelletSize,
+        });
       }
     }
   }
+  drawQuadBatch(wallQuads, WALL_COLOR);
+  drawQuadBatch(pelletQuads, PELLET_COLOR, { time, pulse: 1 });
 
   ghosts.forEach((ghost, index) => {
     const pos = ghost.getPixelPosition(CELL_SIZE);
@@ -185,6 +189,6 @@ restartButtonEl.addEventListener('click', () => {
 
 resetGame();
 engine = new Engine({ canvas, update, render });
-({ drawQuad } = createQuadRenderer(engine.gl));
+({ drawQuad, drawQuadBatch } = createQuadRenderer(engine.gl));
 ({ drawParticles } = createParticleRenderer(engine.gl, { size: 3, palette: DEATH_BURST_PALETTE }));
 engine.start();

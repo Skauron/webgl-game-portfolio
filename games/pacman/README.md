@@ -36,6 +36,13 @@ all of them ends the game.
   full-screen, so it doesn't need one. The particle burst's renderer does
   use a real orthographic projection matrix internally (`engine/core/mat4.js`),
   inherited from the shared particle system.
+- Batched maze rendering: the 13×11 maze has up to ~143 wall/pellet cells,
+  and drawing each with its own `gl.useProgram`/`gl.bufferData`/
+  `gl.drawArrays` call turned out to be this portfolio's single biggest
+  draw-call cost (see [`docs/profiling.md`](../../docs/profiling.md)).
+  `drawQuadBatch` collects every wall (then every pellet) into one big
+  vertex buffer and issues a single draw call per group — 143 draws down
+  to 2 for the whole maze.
 
 ## Architecture
 

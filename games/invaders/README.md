@@ -17,6 +17,13 @@ or the formation reaching your row ends the game.
   (barriers), switched via a `uUseTexture` toggle uniform instead of
   swapping programs — position and UV are both per-vertex dynamic
   attributes, computed in JS per draw call.
+- Batched formation rendering: the 5×5 invader grid used to issue one
+  textured draw call per alive invader (up to 25 a frame). `drawSpriteBatch`
+  packs every invader's position and UV into one big vertex buffer and
+  draws the whole formation in a single `gl.drawArrays` call — it only
+  works because every invader shares the same shader, texture, and default
+  color (see [`docs/profiling.md`](../../docs/profiling.md) for the
+  repo-wide draw-call audit this came out of).
 - A hand-rolled PNG encoder (`scripts/generate-sprites.js`, CRC32 + zlib
   deflate via Node's built-in `zlib`, no new dependency) that generates the
   5-sprite atlas checked into the repo — ship, two invader animation frames,

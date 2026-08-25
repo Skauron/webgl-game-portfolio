@@ -62,6 +62,7 @@ let enemyFireTimer;
 let hitFlashTimer;
 let particles;
 let drawSprite;
+let drawSpriteBatch;
 let drawQuad;
 let drawParticles;
 let engine;
@@ -237,14 +238,16 @@ function render(gl) {
     drawQuad(barrier.x, barrier.y, barrier.width, barrier.height, [shade, shade, shade + 0.05, 1.0]);
   }
 
+  const invaderSprites = [];
   for (let row = 0; row < GRID_ROWS; row += 1) {
     for (let col = 0; col < GRID_COLS; col += 1) {
       if (!formation.alive[row][col]) continue;
       const pos = invaderPosition(formation, col, row);
       const cell = formation.frame === 'A' ? INVADER_CELL_A : INVADER_CELL_B;
-      drawSprite(pos.x, pos.y, INVADER_SIZE, INVADER_SIZE, cell);
+      invaderSprites.push({ x: pos.x, y: pos.y, width: INVADER_SIZE, height: INVADER_SIZE, cellIndex: cell });
     }
   }
+  drawSpriteBatch(invaderSprites);
 
   const isFlashing =
     hitFlashTimer > 0 && Math.floor(hitFlashTimer * PLAYER_HIT_FLASH_BLINK_RATE) % 2 === 0;
@@ -323,6 +326,6 @@ engine = new Engine({ canvas, update, render });
 ({ drawParticles } = createParticleRenderer(engine.gl, { size: 4, palette: EXPLOSION_PALETTE }));
 
 loadTexture(engine.gl, new URL('./assets/sprites.png', import.meta.url).href).then(({ texture }) => {
-  ({ drawSprite, drawQuad } = createSpriteRenderer(engine.gl, texture));
+  ({ drawSprite, drawQuad, drawSpriteBatch } = createSpriteRenderer(engine.gl, texture));
   engine.start();
 });

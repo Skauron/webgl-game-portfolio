@@ -47,7 +47,7 @@ export function createSpriteRenderer(gl, texture) {
     return new Float32Array([x0, y0, x0, y1, x1, y0, x1, y0, x0, y1, x1, y1]);
   }
 
-  function draw(positions, uv, useTexture, color) {
+  function draw(positions, uv, useTexture, color, vertexCount = 6) {
     gl.useProgram(program);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -69,7 +69,7 @@ export function createSpriteRenderer(gl, texture) {
       gl.uniform1i(textureLocation, 0);
     }
 
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
   }
 
   function drawSprite(x, y, width, height, cellIndex, color = [1, 1, 1, 1]) {
@@ -84,5 +84,29 @@ export function createSpriteRenderer(gl, texture) {
     draw(toNDC(x, y, width, height), uv, false, color);
   }
 
-  return { drawSprite, drawQuad };
+  // Draws many same-shader, same-texture, same-color sprites in a single
+  // bufferData/drawArrays pair instead of one pair per sprite. The invader
+  // formation was issuing up to 25 individual textured draw calls a frame
+  // (each its own gl.useProgram + two buffer uploads + gl.drawArrays) for
+  // sprites that never differ in color and always share this one texture —
+  // real, measurable draw-call overhead for zero visual benefit. Batching
+  // only works because every sprite in the call uses the same uColor; a
+  // per-sprite tint (like the player's hit-flash) still needs drawSprite.
+  function drawSpriteBatch(sprites, color = [1, 1, 1, 1]) {
+    if (sprites.length === 0) return;
+
+    const positions = new Float32Array(sprites.length * 12);
+    const uvs = new Float32Array(sprites.length * 12);
+
+    sprites.forEach((sprite, i) => {
+      positions.set(toNDC(sprite.x, sprite.y, sprite.width, sprite.height), i * 12);
+      const u0 = sprite.cellIndex / ATLAS_CELL_COUNT;
+      const u1 = (sprite.cellIndex + 1) / ATLAS_CELL_COUNT;
+      uvs.set([u0, 0, u0, 1, u1, 0, u1, 0, u0, 1, u1, 1], i * 12);
+    });
+
+    draw(positions, uvs, true, color, sprites.length * 6);
+  }
+
+  return { drawSprite, drawQuad, drawSpriteBatch };
 }

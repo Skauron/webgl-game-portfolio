@@ -15,7 +15,10 @@ the project.
 | [Pong Multiplayer](games/pong/) | Real-time 2-player over raw WebSockets, server-authoritative + client-side prediction |
 
 Each game has its own README with the specific WebGL/GLSL techniques it
-demonstrates, its architecture, and how it was tested.
+demonstrates, its architecture, and how it was tested. A repo-wide
+[profiling and optimization pass](docs/profiling.md) audits all four
+games' draw-call counts and documents what got optimized (and, just as
+importantly, what was audited and left alone).
 
 ## Clone and run
 
