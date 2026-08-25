@@ -1,6 +1,6 @@
 import { Engine } from '../../engine/core/Engine.js';
 import { connect } from './net.js';
-import { predictPaddle, lerp, smoothedFactor } from './predict.js';
+import { predictPaddle, lerp } from './predict.js';
 import { createRenderer } from './renderer.js';
 import { createGlowRenderer } from './glowRenderer.js';
 import { createBurst, updateParticles } from '../../engine/core/particles.js';
@@ -15,31 +15,8 @@ const BALL_SIZE = 12;
 const LEFT_PADDLE_X = 20;
 const RIGHT_PADDLE_X = COURT_WIDTH - 20 - PADDLE_WIDTH;
 
-// These are correction-per-server-tick strengths (the server ticks at
-// 30Hz). Applying them directly as a per-render-frame lerp factor made the
-// correction strength scale with the client's frame rate instead of the
-// server's tick rate: at 60fps (2 renders per tick) the same stale target
-// got blended in twice, at 120fps four times, compounding into a much
-// stronger pull than intended and reading as jittery, rough paddle motion,
-// worse on higher-refresh-rate monitors. smoothedFactor() rescales the
-// factor by elapsed time so the *total* correction applied over one tick's
-// worth of wall-clock time stays constant regardless of render frame rate.
-const TICK_DT = 1 / 30;
 const RECONCILE_FACTOR = 0.2;
 const INTERP_FACTOR = 0.3;
-
-// The client and server run the identical movePaddle formula, so with no
-// packet loss the local prediction and the server's authoritative value
-// should agree except for the position the paddle covered during one
-// round-trip of network latency — that's expected lead, not drift, and
-// isn't something to correct against. Continuously blending even that
-// small, constant gap back toward a deliberately-stale server value fights
-// the local prediction on every tick, which is what made input feel heavy
-// and "off" even after the framerate-independence fix above. Below this
-// threshold, trust prediction outright; only actual desyncs (a dropped
-// input message, a missed edge case) are large enough to cross it and get
-// corrected.
-const RECONCILE_DEADZONE = 4; // px
 
 const PADDLE_COLOR = [1.0, 1.0, 1.0, 1.0];
 const BALL_COLOR = [1.0, 1.0, 1.0, 1.0];
@@ -172,15 +149,10 @@ function update(dt) {
     const serverMyY = mySide === 'left' ? latestState.paddles.left : latestState.paddles.right;
     const serverOpponentY = mySide === 'left' ? latestState.paddles.right : latestState.paddles.left;
 
-    const interpFactor = smoothedFactor(INTERP_FACTOR, dt, TICK_DT);
-
-    if (Math.abs(myPaddle.y - serverMyY) > RECONCILE_DEADZONE) {
-      const reconcileFactor = smoothedFactor(RECONCILE_FACTOR, dt, TICK_DT);
-      myPaddle.y = lerp(myPaddle.y, serverMyY, reconcileFactor);
-    }
-    opponentPaddle.y = lerp(opponentPaddle.y, serverOpponentY, interpFactor);
-    ball.x = lerp(ball.x, latestState.ball.x, interpFactor);
-    ball.y = lerp(ball.y, latestState.ball.y, interpFactor);
+    myPaddle.y = lerp(myPaddle.y, serverMyY, RECONCILE_FACTOR);
+    opponentPaddle.y = lerp(opponentPaddle.y, serverOpponentY, INTERP_FACTOR);
+    ball.x = lerp(ball.x, latestState.ball.x, INTERP_FACTOR);
+    ball.y = lerp(ball.y, latestState.ball.y, INTERP_FACTOR);
     updateBallTrail();
   }
 }
