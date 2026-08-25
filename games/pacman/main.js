@@ -147,7 +147,7 @@ function render(gl) {
           CELL_SIZE - inset * 2,
           CELL_SIZE - inset * 2,
           PELLET_COLOR,
-          { time, pulse: 1, glow: 1 }
+          { time, pulse: 1 }
         );
       }
     }

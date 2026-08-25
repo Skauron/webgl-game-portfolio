@@ -9,12 +9,12 @@ all of them ends the game.
 
 ## What it demonstrates
 
-- Pellets: a real per-fragment radial gradient, not just a color pulse — a
-  second attribute (`aLocal`, quad-local -1..1 coordinates) feeds a
-  `smoothstep`-based falloff in the fragment shader (`uGlow` toggle),
-  giving each pellet a bright core fading to its edge, still animated by
-  the existing `uTime` pulse. Walls/ghosts/player use the same shader with
-  the toggle off, so it's zero-cost when unused (`games/pacman/renderer.js`).
+- Pellets pulse brightness via a `uTime` uniform in the shared quad shader
+  (`games/pacman/renderer.js`). A radial-gradient glow was tried here first
+  but dropped: against this game's `NEAREST`-filtered pixel-art look, a
+  smooth circular falloff just reads as a blurry off-style dot — flat,
+  hard-edged squares with a brightness pulse fit the aesthetic better than
+  a soft gradient would.
 - One shared shader program for every draw (walls, pellets, ghosts,
   player), toggled per-call via uniforms instead of switching programs —
   the pattern every later game in this repo reuses and extends.
