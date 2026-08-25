@@ -1,34 +1,37 @@
 import { describe, it, expect } from 'vitest';
-import {
-  createExplosion,
-  updateParticles,
-  PARTICLE_COUNT,
-  PARTICLE_LIFE,
-  PARTICLE_SPEED_MIN,
-} from './particles.js';
+import { createBurst, updateParticles } from './particles.js';
+
+const OPTIONS = { count: 10, life: 0.5, speedMin: 40, speedMax: 120 };
 
 function fixedRandom(sequence) {
   let i = 0;
   return () => sequence[i++ % sequence.length];
 }
 
-describe('createExplosion', () => {
-  it('spawns PARTICLE_COUNT particles at the given origin', () => {
-    const particles = createExplosion(100, 200);
-    expect(particles).toHaveLength(PARTICLE_COUNT);
+describe('createBurst', () => {
+  it('spawns `count` particles at the given origin', () => {
+    const particles = createBurst(100, 200, OPTIONS);
+    expect(particles).toHaveLength(OPTIONS.count);
     for (const particle of particles) {
       expect(particle.x).toBe(100);
       expect(particle.y).toBe(200);
-      expect(particle.life).toBe(PARTICLE_LIFE);
-      expect(particle.maxLife).toBe(PARTICLE_LIFE);
+      expect(particle.life).toBe(OPTIONS.life);
+      expect(particle.maxLife).toBe(OPTIONS.life);
     }
   });
 
   it('derives velocity from the injected random source deterministically', () => {
-    // angle=0 -> straight along +x; speed at random()=0 is PARTICLE_SPEED_MIN
-    const particles = createExplosion(0, 0, fixedRandom([0, 0]));
-    expect(particles[0].vx).toBeCloseTo(PARTICLE_SPEED_MIN);
+    // angle=0 -> straight along +x; speed at random()=0 is speedMin
+    const particles = createBurst(0, 0, OPTIONS, fixedRandom([0, 0]));
+    expect(particles[0].vx).toBeCloseTo(OPTIONS.speedMin);
     expect(particles[0].vy).toBeCloseTo(0);
+  });
+
+  it('respects a different count/life/speed configuration', () => {
+    const particles = createBurst(0, 0, { count: 3, life: 0.3, speedMin: 60, speedMax: 160 }, fixedRandom([0]));
+    expect(particles).toHaveLength(3);
+    expect(particles[0].life).toBe(0.3);
+    expect(particles[0].vx).toBeCloseTo(60);
   });
 });
 

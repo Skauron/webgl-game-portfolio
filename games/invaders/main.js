@@ -16,8 +16,8 @@ import { createPlayer, updatePlayer, tryShoot, PLAYER_Y } from './player.js';
 import { createBullet, updateBullet, BULLET_WIDTH } from './bullet.js';
 import { createBarrier, hitBarrier } from './barrier.js';
 import { rectsOverlap } from './collision.js';
-import { createExplosion, updateParticles } from './particles.js';
-import { createParticleRenderer } from './particleRenderer.js';
+import { createBurst, updateParticles } from '../../engine/core/particles.js';
+import { createParticleRenderer } from '../../engine/core/ParticleRenderer.js';
 
 const CANVAS_SIZE = 480;
 const PLAYER_CELL = 0;
@@ -35,6 +35,13 @@ const PLAYER_HIT_FLASH_DURATION = 1.0;
 const PLAYER_HIT_FLASH_BLINK_RATE = 10; // toggles per second
 const PLAYER_HIT_FLASH_COLOR = [1.0, 0.2, 0.2, 1.0];
 const WHITE = [1.0, 1.0, 1.0, 1.0];
+
+const EXPLOSION_OPTIONS = { count: 10, life: 0.5, speedMin: 40, speedMax: 120 };
+const EXPLOSION_PALETTE = [
+  [1.0, 0.95, 0.55],
+  [1.0, 0.55, 0.15],
+  [0.65, 0.12, 0.05],
+];
 
 const canvas = document.querySelector('#viewport');
 const scoreEl = document.querySelector('#score');
@@ -139,7 +146,9 @@ function checkPlayerBulletVsInvaders() {
       const invaderRect = { x: pos.x, y: pos.y, width: INVADER_SIZE, height: INVADER_SIZE };
       if (rectsOverlap(playerBullet, invaderRect)) {
         killInvader(formation, col, row);
-        particles.push(...createExplosion(pos.x + INVADER_SIZE / 2, pos.y + INVADER_SIZE / 2));
+        particles.push(
+          ...createBurst(pos.x + INVADER_SIZE / 2, pos.y + INVADER_SIZE / 2, EXPLOSION_OPTIONS)
+        );
         score += 10;
         updateHud();
         return true;
@@ -311,7 +320,7 @@ fireButtonEl.addEventListener('pointerdown', () => {
 
 resetGame();
 engine = new Engine({ canvas, update, render });
-({ drawParticles } = createParticleRenderer(engine.gl));
+({ drawParticles } = createParticleRenderer(engine.gl, { size: 4, palette: EXPLOSION_PALETTE }));
 
 loadTexture(engine.gl, new URL('./assets/sprites.png', import.meta.url).href).then(({ texture }) => {
   ({ drawSprite, drawQuad } = createSpriteRenderer(engine.gl, texture));

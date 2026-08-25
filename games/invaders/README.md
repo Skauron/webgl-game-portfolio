@@ -33,12 +33,18 @@ or the formation reaching your row ends the game.
   Pacman) — but the **explosion particle effect breaks that rule on
   purpose**: `engine/core/mat4.js` adds a real orthographic projection
   matrix (`ortho(left, right, bottom, top, near, far)`, standard
-  column-major 4×4), and `games/invaders/particleRenderer.js` uses it via
-  a `uProjection` uniform in the vertex shader instead of manual NDC math.
-  Killing an invader spawns ~16 particles (`games/invaders/particles.js`,
-  pure physics: random angle/speed, finite lifetime) that fly outward and
-  fade, drawn as soft glowing circles (`smoothstep` on distance from
-  center in the fragment shader) with additive blending for the glow.
+  column-major 4×4), used via a `uProjection` uniform in the particle
+  vertex shader instead of manual NDC math.
+- Killing an invader spawns particles (`engine/core/particles.js`: pure
+  physics, random angle/speed, finite lifetime) that fly outward and cool
+  through a fixed, quantized color ramp (bright white-yellow → orange →
+  dark red) as they age, drawn as hard-edged squares — not a soft
+  antialiased glow — to read as pixel-art embers matching the sprite
+  atlas's `NEAREST`-filtered look, with additive blending
+  (`engine/core/ParticleRenderer.js`). This particle system is genuinely
+  reusable engine code, not Invaders-specific: it takes a burst
+  size/lifetime/speed config and a 3-color palette as parameters, so
+  other games can reuse it with their own look (see Pacman/Pong).
 
 ## Architecture
 
@@ -55,11 +61,12 @@ Pure logic is unit-tested: formation timing/edge-detection/speed-up
 (`formation.test.js`), player movement and the single-bullet gate
 (`player.test.js`), bullet movement/off-screen detection
 (`bullet.test.js`), barrier hit-point countdown (`barrier.test.js`),
-AABB overlap (`collision.test.js`), particle spawn/physics/lifetime
-(`particles.test.js`), and the projection matrix itself — corner and
-center points checked against their expected NDC output
-(`../../engine/core/mat4.test.js`). Texture loading, rendering, and the
-composed game loop are manual-only.
+AABB overlap (`collision.test.js`). The shared engine pieces this game
+uses — particle spawn/physics/lifetime and the orthographic projection
+matrix — are tested where they live:
+[`engine/core/particles.test.js`](../../engine/core/particles.test.js),
+[`engine/core/mat4.test.js`](../../engine/core/mat4.test.js). Texture
+loading, rendering, and the composed game loop are manual-only.
 
 ## Run locally
 

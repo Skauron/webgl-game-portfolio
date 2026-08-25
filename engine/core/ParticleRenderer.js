@@ -1,5 +1,5 @@
-import { createProgram } from '../../engine/core/Shader.js';
-import { ortho } from '../../engine/core/mat4.js';
+import { createProgram } from './Shader.js';
+import { ortho } from './mat4.js';
 
 const VERTEX_SOURCE = `
   attribute vec2 aOffset;
@@ -13,23 +13,25 @@ const VERTEX_SOURCE = `
 `;
 
 // Hard-edged square (no radial falloff) so particles read as blocky pixel-art
-// embers, not soft photographic glow — matches the sprite atlas's NEAREST-
-// filtered look. Color cools through a fixed, quantized ramp (bright white-
-// yellow -> orange -> dark red) as the particle ages, the way limited-palette
-// sprite explosions animate through a handful of discrete frames rather than
-// a smooth analog fade.
+// embers, not soft photographic glow. Color cools through a fixed, quantized
+// ramp (caller-supplied hot/mid/cold palette) as the particle ages, the way
+// limited-palette sprite explosions animate through a handful of discrete
+// frames rather than a smooth analog fade.
 const FRAGMENT_SOURCE = `
   precision mediump float;
   uniform float uLifeRatio;
+  uniform vec3 uHotColor;
+  uniform vec3 uMidColor;
+  uniform vec3 uColdColor;
   void main() {
     float step4 = ceil(uLifeRatio * 4.0) / 4.0;
     vec3 color;
     if (step4 > 0.7) {
-      color = vec3(1.0, 0.95, 0.55);
+      color = uHotColor;
     } else if (step4 > 0.45) {
-      color = vec3(1.0, 0.55, 0.15);
+      color = uMidColor;
     } else {
-      color = vec3(0.65, 0.12, 0.05);
+      color = uColdColor;
     }
     gl_FragColor = vec4(color, step4);
   }
@@ -40,23 +42,30 @@ const QUAD_OFFSETS = new Float32Array([
   1, -1, -1, 1, 1, 1,
 ]);
 
-const PARTICLE_SIZE = 4;
+const DEFAULT_PALETTE = [
+  [1.0, 0.95, 0.55],
+  [1.0, 0.55, 0.15],
+  [0.65, 0.12, 0.05],
+];
 
-export function createParticleRenderer(gl) {
+export function createParticleRenderer(gl, { size = 4, palette = DEFAULT_PALETTE } = {}) {
   const program = createProgram(gl, VERTEX_SOURCE, FRAGMENT_SOURCE);
   const offsetLocation = gl.getAttribLocation(program, 'aOffset');
   const centerLocation = gl.getUniformLocation(program, 'uCenter');
   const sizeLocation = gl.getUniformLocation(program, 'uSize');
   const lifeRatioLocation = gl.getUniformLocation(program, 'uLifeRatio');
   const projectionLocation = gl.getUniformLocation(program, 'uProjection');
+  const hotColorLocation = gl.getUniformLocation(program, 'uHotColor');
+  const midColorLocation = gl.getUniformLocation(program, 'uMidColor');
+  const coldColorLocation = gl.getUniformLocation(program, 'uColdColor');
 
   const offsetBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, offsetBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, QUAD_OFFSETS, gl.STATIC_DRAW);
 
-  // Real projection matrix (vs. the sprite renderer's manual NDC arithmetic):
-  // pixel space (0,0 top-left .. canvas size bottom-right) straight to clip
-  // space, y-flipped to match this game's top-left-origin convention.
+  // Real projection matrix (vs. manual NDC arithmetic): pixel space (0,0
+  // top-left .. canvas size bottom-right) straight to clip space, y-flipped
+  // to match this repo's top-left-origin convention.
   const projection = ortho(0, gl.canvas.width, gl.canvas.height, 0, -1, 1);
 
   function drawParticles(particles) {
@@ -71,7 +80,10 @@ export function createParticleRenderer(gl) {
     gl.vertexAttribPointer(offsetLocation, 2, gl.FLOAT, false, 0, 0);
 
     gl.uniformMatrix4fv(projectionLocation, false, projection);
-    gl.uniform1f(sizeLocation, PARTICLE_SIZE);
+    gl.uniform1f(sizeLocation, size);
+    gl.uniform3fv(hotColorLocation, palette[0]);
+    gl.uniform3fv(midColorLocation, palette[1]);
+    gl.uniform3fv(coldColorLocation, palette[2]);
 
     for (const particle of particles) {
       // Round to whole canvas pixels so blocky-square edges stay crisp
