@@ -9,12 +9,21 @@ all of them ends the game.
 
 ## What it demonstrates
 
-- First real GLSL effect beyond a flat triangle: pellets pulse brightness
-  via a `uTime` uniform in the shared quad shader — a genuine, if small,
-  shader-driven visual (`games/pacman/renderer.js`).
+- Pellets: a real per-fragment radial gradient, not just a color pulse — a
+  second attribute (`aLocal`, quad-local -1..1 coordinates) feeds a
+  `smoothstep`-based falloff in the fragment shader (`uGlow` toggle),
+  giving each pellet a bright core fading to its edge, still animated by
+  the existing `uTime` pulse. Walls/ghosts/player use the same shader with
+  the toggle off, so it's zero-cost when unused (`games/pacman/renderer.js`).
 - One shared shader program for every draw (walls, pellets, ghosts,
   player), toggled per-call via uniforms instead of switching programs —
   the pattern every later game in this repo reuses and extends.
+- Getting caught by a ghost spawns a particle burst at the player's
+  position — the same reusable `engine/core/particles.js` +
+  `engine/core/ParticleRenderer.js` system Space Invaders uses for its
+  explosions, configured here with a white/yellow palette and a smaller,
+  gentler burst instead of Invaders' fiery one. One particle system, two
+  different looks, purely from its config.
 - Grid-continuous movement: entities track a cell, a facing direction, and
   a sub-cell progress fraction, with input buffered and only applied at
   cell centers (`games/pacman/player.js`, `games/pacman/movement.js`).
@@ -22,10 +31,11 @@ all of them ends the game.
   direction, excluding reversal unless it's the only option
   (`games/pacman/ghost.js`), with the random source injectable so behavior
   is deterministic under test.
-- No camera/projection matrices — deliberately out of scope here. The view
-  is static and full-screen, so grid → pixel → NDC is direct arithmetic.
-  (Matrix-based transforms get pulled in only when a game actually needs
-  them, per this repo's build order.)
+- The maze/wall/pellet/ghost/player rendering still uses direct grid →
+  pixel → NDC arithmetic, no projection matrix — the view is static and
+  full-screen, so it doesn't need one. The particle burst's renderer does
+  use a real orthographic projection matrix internally (`engine/core/mat4.js`),
+  inherited from the shared particle system.
 
 ## Architecture
 

@@ -10,6 +10,8 @@ import {
   consumePellet,
   countRemainingPellets,
 } from './maze.js';
+import { createBurst, updateParticles } from '../../engine/core/particles.js';
+import { createParticleRenderer } from '../../engine/core/ParticleRenderer.js';
 
 const WALL_COLOR = [0.15, 0.15, 0.65, 1.0];
 const PELLET_COLOR = [1.0, 1.0, 0.8, 1.0];
@@ -17,6 +19,13 @@ const PLAYER_COLOR = [1.0, 0.9, 0.1, 1.0];
 const GHOST_COLORS = [
   [1.0, 0.2, 0.2, 1.0],
   [1.0, 0.4, 0.8, 1.0],
+];
+
+const DEATH_BURST_OPTIONS = { count: 12, life: 0.5, speedMin: 30, speedMax: 100 };
+const DEATH_BURST_PALETTE = [
+  [1.0, 1.0, 0.9],
+  [1.0, 0.9, 0.2],
+  [0.6, 0.5, 0.1],
 ];
 
 const KEY_DIRECTIONS = {
@@ -43,7 +52,9 @@ let ghosts;
 let score;
 let lives;
 let state; // 'playing' | 'gameover' | 'victory'
+let particles;
 let drawQuad;
+let drawParticles;
 let engine;
 
 function resetGame() {
@@ -53,6 +64,7 @@ function resetGame() {
   score = 0;
   lives = 3;
   state = 'playing';
+  particles = [];
   overlayEl.classList.remove('visible');
   updateHud();
 }
@@ -88,6 +100,7 @@ function update(dt) {
 
   player.update(dt, grid);
   ghosts.forEach((ghost) => ghost.update(dt, grid));
+  particles = updateParticles(particles, dt);
 
   if (consumePellet(grid, player.col, player.row)) {
     score += 10;
@@ -100,6 +113,10 @@ function update(dt) {
 
   const caught = ghosts.some((ghost) => ghost.col === player.col && ghost.row === player.row);
   if (caught) {
+    const playerPos = player.getPixelPosition(CELL_SIZE);
+    particles.push(
+      ...createBurst(playerPos.x + CELL_SIZE / 2, playerPos.y + CELL_SIZE / 2, DEATH_BURST_OPTIONS)
+    );
     lives -= 1;
     updateHud();
     if (lives <= 0) {
@@ -130,7 +147,7 @@ function render(gl) {
           CELL_SIZE - inset * 2,
           CELL_SIZE - inset * 2,
           PELLET_COLOR,
-          { time, pulse: 1 }
+          { time, pulse: 1, glow: 1 }
         );
       }
     }
@@ -143,6 +160,8 @@ function render(gl) {
 
   const playerPos = player.getPixelPosition(CELL_SIZE);
   drawQuad(playerPos.x + 2, playerPos.y + 2, CELL_SIZE - 4, CELL_SIZE - 4, PLAYER_COLOR);
+
+  drawParticles(particles);
 }
 
 window.addEventListener('keydown', (event) => {
@@ -167,4 +186,5 @@ restartButtonEl.addEventListener('click', () => {
 resetGame();
 engine = new Engine({ canvas, update, render });
 ({ drawQuad } = createQuadRenderer(engine.gl));
+({ drawParticles } = createParticleRenderer(engine.gl, { size: 3, palette: DEATH_BURST_PALETTE }));
 engine.start();
