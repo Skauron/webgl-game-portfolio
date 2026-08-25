@@ -38,14 +38,16 @@ server" message rather than looking frozen.
   finished over resilience nobody asked for).
 - Ball glow + trail: a second shader (`games/pong/glowRenderer.js`) applies
   a real orthographic projection matrix (`engine/core/mat4.js`, the same
-  technique used for Invaders' explosions, now in a second game) and a
-  `smoothstep` radial falloff for a soft neon halo, with 6 fading afterimage
-  quads trailing the ball for a motion streak. A glow quad alone read as an
-  undefined blur at this size, so the ball itself is a flat, crisp quad
-  drawn on top of a dimmer, larger glow quad behind it — solid core, soft
-  aura. The trail is cleared instead of drawn across the frame a point is
-  scored (detected client-side as a position jump too large to be real
-  movement), so a re-serve doesn't draw a streak across the whole court.
+  technique used for Invaders' explosions, now in a second game). The
+  renderer has two looks controlled by a `uHard` toggle: a `smoothstep`
+  radial falloff across the whole radius for the soft neon halo and the 6
+  fading afterimage quads trailing the ball, and a hard `step` boundary for
+  the ball itself — a full-radius fade there read as an undefined blur
+  rather than a defined circle, so the ball is a crisp hard-edged disc
+  drawn on top of a dimmer, larger soft-glow quad behind it for the aura.
+  The trail is cleared instead of drawn across the frame a point is scored
+  (detected client-side as a position jump too large to be real movement),
+  so a re-serve doesn't draw a streak across the whole court.
 - Serve countdown: the server freezes the ball (paddles can still move) for
   3 seconds before the first serve and before every re-serve after a point,
   broadcasting the remaining whole seconds as a `countdown` field on each

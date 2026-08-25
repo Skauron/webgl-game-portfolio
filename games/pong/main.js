@@ -194,11 +194,11 @@ function render(gl) {
     const brightness = ((index + 1) / ballTrail.length) * 0.4;
     drawGlow(point.x + BALL_SIZE / 2, point.y + BALL_SIZE / 2, BALL_TRAIL_GLOW_SIZE, BALL_COLOR, brightness);
   });
-  // Soft halo behind a crisp, solid ball — a pure glow quad alone (no hard
-  // core) read as an undefined blur at this size, so the actual ball is a
-  // flat quad drawn on top of a dimmer, larger glow quad for the aura.
+  // Soft halo behind a crisp, hard-edged circle — a pure smoothstep glow
+  // alone (fading across the whole radius) read as an undefined blur, not a
+  // defined round ball.
   drawGlow(ball.x + BALL_SIZE / 2, ball.y + BALL_SIZE / 2, BALL_GLOW_SIZE, BALL_COLOR, 0.5);
-  drawQuad(ball.x, ball.y, BALL_SIZE, BALL_SIZE, BALL_COLOR);
+  drawGlow(ball.x + BALL_SIZE / 2, ball.y + BALL_SIZE / 2, BALL_SIZE / 2, BALL_COLOR, 1.0, true);
 
   drawSparks(sparks);
 }

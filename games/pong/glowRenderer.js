@@ -14,17 +14,21 @@ const VERTEX_SOURCE = `
   }
 `;
 
-// Radial glow: bright center fading to the quad's edge via smoothstep on
-// distance. The court background is pure black, so fading uColor toward 0
-// reads identically to fading alpha — no blend state needed.
+// uHard switches between two looks: a soft radial glow (smoothstep falloff
+// across the whole radius — used for the halo/trail, where fuzziness is the
+// point) and a hard-edged circle (a single step at the boundary, used for
+// the ball itself — a full-radius fade there read as an undefined blur, not
+// a defined round shape).
 const FRAGMENT_SOURCE = `
   precision mediump float;
   uniform vec4 uColor;
   uniform float uBrightness;
+  uniform float uHard;
   varying vec2 vOffset;
   void main() {
-    float radial = smoothstep(1.0, 0.0, length(vOffset));
-    gl_FragColor = vec4(uColor.rgb * uBrightness * radial, uColor.a);
+    float dist = length(vOffset);
+    float mask = uHard > 0.5 ? step(dist, 1.0) : smoothstep(1.0, 0.0, dist);
+    gl_FragColor = vec4(uColor.rgb * uBrightness * mask, uColor.a);
   }
 `;
 
@@ -40,6 +44,7 @@ export function createGlowRenderer(gl) {
   const sizeLocation = gl.getUniformLocation(program, 'uSize');
   const colorLocation = gl.getUniformLocation(program, 'uColor');
   const brightnessLocation = gl.getUniformLocation(program, 'uBrightness');
+  const hardLocation = gl.getUniformLocation(program, 'uHard');
   const projectionLocation = gl.getUniformLocation(program, 'uProjection');
 
   const offsetBuffer = gl.createBuffer();
@@ -52,7 +57,7 @@ export function createGlowRenderer(gl) {
   // particle system, applied here to a second game.
   const projection = ortho(0, gl.canvas.width, gl.canvas.height, 0, -1, 1);
 
-  function drawGlow(x, y, size, color, brightness = 1) {
+  function drawGlow(x, y, size, color, brightness = 1, hard = false) {
     gl.useProgram(program);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, offsetBuffer);
@@ -64,6 +69,7 @@ export function createGlowRenderer(gl) {
     gl.uniform1f(sizeLocation, size);
     gl.uniform4fv(colorLocation, color);
     gl.uniform1f(brightnessLocation, brightness);
+    gl.uniform1f(hardLocation, hard ? 1 : 0);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
