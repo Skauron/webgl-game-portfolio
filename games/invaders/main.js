@@ -16,6 +16,8 @@ import { createPlayer, updatePlayer, tryShoot, PLAYER_Y } from './player.js';
 import { createBullet, updateBullet, BULLET_WIDTH } from './bullet.js';
 import { createBarrier, hitBarrier } from './barrier.js';
 import { rectsOverlap } from './collision.js';
+import { createExplosion, updateParticles } from './particles.js';
+import { createParticleRenderer } from './particleRenderer.js';
 
 const CANVAS_SIZE = 480;
 const PLAYER_CELL = 0;
@@ -51,8 +53,10 @@ let lives;
 let state; // 'playing' | 'gameover' | 'victory'
 let enemyFireTimer;
 let hitFlashTimer;
+let particles;
 let drawSprite;
 let drawQuad;
+let drawParticles;
 let engine;
 
 function resetGame() {
@@ -70,6 +74,7 @@ function resetGame() {
   state = 'playing';
   enemyFireTimer = ENEMY_FIRE_MIN_INTERVAL;
   hitFlashTimer = 0;
+  particles = [];
   overlayEl.classList.remove('visible');
   updateHud();
 }
@@ -134,6 +139,7 @@ function checkPlayerBulletVsInvaders() {
       const invaderRect = { x: pos.x, y: pos.y, width: INVADER_SIZE, height: INVADER_SIZE };
       if (rectsOverlap(playerBullet, invaderRect)) {
         killInvader(formation, col, row);
+        particles.push(...createExplosion(pos.x + INVADER_SIZE / 2, pos.y + INVADER_SIZE / 2));
         score += 10;
         updateHud();
         return true;
@@ -159,6 +165,8 @@ function update(dt) {
   if (hitFlashTimer > 0) {
     hitFlashTimer = Math.max(0, hitFlashTimer - dt);
   }
+
+  particles = updateParticles(particles, dt);
 
   if (playerBullet) {
     const stillOnScreen = updateBullet(playerBullet, dt, CANVAS_SIZE);
@@ -240,6 +248,8 @@ function render(gl) {
   for (const bullet of enemyBullets) {
     drawSprite(bullet.x, bullet.y, bullet.width, bullet.height, ENEMY_BULLET_CELL);
   }
+
+  drawParticles(particles);
 }
 
 const GAME_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'a', 'd', ' ']);
@@ -301,6 +311,7 @@ fireButtonEl.addEventListener('pointerdown', () => {
 
 resetGame();
 engine = new Engine({ canvas, update, render });
+({ drawParticles } = createParticleRenderer(engine.gl));
 
 loadTexture(engine.gl, new URL('./assets/sprites.png', import.meta.url).href).then(({ texture }) => {
   ({ drawSprite, drawQuad } = createSpriteRenderer(engine.gl, texture));
