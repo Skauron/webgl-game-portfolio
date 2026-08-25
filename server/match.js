@@ -60,7 +60,7 @@ export class Match {
     } catch {
       return;
     }
-    if (message.type === 'input' && [-1, 0, 1].includes(message.direction)) {
+    if (message && typeof message === 'object' && message.type === 'input' && [-1, 0, 1].includes(message.direction)) {
       this.directions[side] = message.direction;
     }
   }
