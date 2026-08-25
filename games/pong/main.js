@@ -2,6 +2,9 @@ import { Engine } from '../../engine/core/Engine.js';
 import { connect } from './net.js';
 import { predictPaddle, lerp } from './predict.js';
 import { createRenderer } from './renderer.js';
+import { createGlowRenderer } from './glowRenderer.js';
+import { createBurst, updateParticles } from '../../engine/core/particles.js';
+import { createParticleRenderer } from '../../engine/core/ParticleRenderer.js';
 import { WS_URL } from './config.js';
 
 const COURT_WIDTH = 800;
@@ -19,6 +22,19 @@ const PADDLE_COLOR = [1.0, 1.0, 1.0, 1.0];
 const BALL_COLOR = [1.0, 1.0, 1.0, 1.0];
 const CENTER_LINE_COLOR = [0.3, 0.3, 0.3, 1.0];
 
+const BALL_GLOW_SIZE = 11;
+const BALL_TRAIL_LENGTH = 6;
+const BALL_TRAIL_GLOW_SIZE = 8;
+const BALL_TRAIL_JUMP_THRESHOLD = 100; // px — a jump this big means the ball was re-served, not moving
+
+const PADDLE_HIT_MARGIN = 20; // how close to a paddle's x-line counts as "hit it"
+const SPARK_OPTIONS = { count: 8, life: 0.3, speedMin: 60, speedMax: 160 };
+const SPARK_PALETTE = [
+  [0.85, 0.95, 1.0],
+  [0.5, 0.8, 1.0],
+  [0.15, 0.35, 0.55],
+];
+
 const canvas = document.querySelector('#viewport');
 const scoreEl = document.querySelector('#score');
 const statusEl = document.querySelector('#status');
@@ -35,7 +51,14 @@ const myPaddle = { y: (COURT_HEIGHT - PADDLE_HEIGHT) / 2 };
 const opponentPaddle = { y: (COURT_HEIGHT - PADDLE_HEIGHT) / 2 };
 const ball = { x: (COURT_WIDTH - BALL_SIZE) / 2, y: (COURT_HEIGHT - BALL_SIZE) / 2 };
 
+let ballTrail = [];
+let sparks = [];
+let previousServerBallX = null;
+let previousBallDx = 0;
+
 let drawQuad;
+let drawGlow;
+let drawSparks;
 
 function setStatus(text) {
   statusEl.textContent = text;
@@ -53,6 +76,25 @@ function updateScore(score) {
 function setDirection(dir) {
   myDirection = dir;
   socket.sendInput(dir);
+}
+
+// Detects a paddle bounce by watching the server's raw ball.x for a
+// horizontal-direction reversal near a paddle line. Wall bounces only flip
+// vy, never vx, so this can't false-positive on those — only an actual
+// paddle collision reverses x.
+function detectPaddleHit(ballX, ballY) {
+  if (previousServerBallX !== null) {
+    const dx = ballX - previousServerBallX;
+    if (previousBallDx !== 0 && Math.sign(dx) !== Math.sign(previousBallDx)) {
+      const nearLeftPaddle = ballX <= LEFT_PADDLE_X + PADDLE_WIDTH + PADDLE_HIT_MARGIN;
+      const nearRightPaddle = ballX >= RIGHT_PADDLE_X - PADDLE_HIT_MARGIN;
+      if (nearLeftPaddle || nearRightPaddle) {
+        sparks.push(...createBurst(ballX, ballY, SPARK_OPTIONS));
+      }
+    }
+    if (dx !== 0) previousBallDx = dx;
+  }
+  previousServerBallX = ballX;
 }
 
 const COLD_START_MESSAGE_DELAY = 3000; // ms
@@ -82,6 +124,7 @@ const socket = connect(WS_URL, {
     } else if (message.type === 'state') {
       latestState = message;
       updateScore(message.score);
+      detectPaddleHit(message.ball.x, message.ball.y);
     } else if (message.type === 'gameover') {
       updateScore(message.score);
       const youWon = message.winner === mySide;
@@ -94,7 +137,18 @@ const socket = connect(WS_URL, {
   onError: () => setStatus('Connection error — reload to reconnect'),
 });
 
+function updateBallTrail() {
+  const last = ballTrail[ballTrail.length - 1];
+  if (last && Math.hypot(ball.x - last.x, ball.y - last.y) > BALL_TRAIL_JUMP_THRESHOLD) {
+    ballTrail.length = 0; // ball was re-served (teleported), not moving — don't trail across the jump
+  }
+  ballTrail.push({ x: ball.x, y: ball.y });
+  if (ballTrail.length > BALL_TRAIL_LENGTH) ballTrail.shift();
+}
+
 function update(dt) {
+  sparks = updateParticles(sparks, dt);
+
   if (!mySide) return;
 
   predictPaddle(myPaddle, myDirection, dt);
@@ -107,6 +161,7 @@ function update(dt) {
     opponentPaddle.y = lerp(opponentPaddle.y, serverOpponentY, INTERP_FACTOR);
     ball.x = lerp(ball.x, latestState.ball.x, INTERP_FACTOR);
     ball.y = lerp(ball.y, latestState.ball.y, INTERP_FACTOR);
+    updateBallTrail();
   }
 }
 
@@ -122,7 +177,14 @@ function render(gl) {
 
   drawQuad(LEFT_PADDLE_X, leftPaddle.y, PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_COLOR);
   drawQuad(RIGHT_PADDLE_X, rightPaddle.y, PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_COLOR);
-  drawQuad(ball.x, ball.y, BALL_SIZE, BALL_SIZE, BALL_COLOR);
+
+  ballTrail.forEach((point, index) => {
+    const brightness = ((index + 1) / ballTrail.length) * 0.4;
+    drawGlow(point.x + BALL_SIZE / 2, point.y + BALL_SIZE / 2, BALL_TRAIL_GLOW_SIZE, BALL_COLOR, brightness);
+  });
+  drawGlow(ball.x + BALL_SIZE / 2, ball.y + BALL_SIZE / 2, BALL_GLOW_SIZE, BALL_COLOR, 1.0);
+
+  drawSparks(sparks);
 }
 
 const KEY_UP = new Set(['ArrowUp', 'w']);
@@ -158,4 +220,6 @@ downButtonEl.addEventListener('pointerleave', () => {
 
 const engine = new Engine({ canvas, update, render });
 ({ drawQuad } = createRenderer(engine.gl));
+({ drawGlow } = createGlowRenderer(engine.gl));
+({ drawParticles: drawSparks } = createParticleRenderer(engine.gl, { size: 3, palette: SPARK_PALETTE }));
 engine.start();

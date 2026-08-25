@@ -36,6 +36,21 @@ server" message rather than looking frozen.
   immediately or queued. No reconnection — a dropped socket ends the match
   and the peer is notified (`opponent-left`), by design (small and
   finished over resilience nobody asked for).
+- Ball glow + trail: a second shader (`games/pong/glowRenderer.js`) applies
+  a real orthographic projection matrix (`engine/core/mat4.js`, the same
+  technique used for Invaders' explosions, now in a second game) and a
+  `smoothstep` radial falloff for a soft neon look, with 6 fading afterimage
+  quads trailing the ball for a motion streak. The trail is cleared instead
+  of drawn across the frame a point is scored (detected client-side as a
+  position jump too large to be real movement), so a re-serve doesn't draw
+  a streak across the whole court.
+- Paddle-hit sparks: the client has no collision events, only a ball
+  position each tick — so a paddle hit is *inferred* by watching the
+  server's ball.x for a horizontal-direction reversal near a paddle's line
+  (a wall bounce only flips `vy`, never `vx`, so this can't false-positive
+  on those). On a real hit, it spawns a spark burst using the same reusable
+  `engine/core/particles.js` system Invaders and Pacman use, with its own
+  white/cyan palette.
 
 ## Architecture
 
