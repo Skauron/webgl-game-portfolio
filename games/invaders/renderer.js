@@ -18,7 +18,7 @@ const FRAGMENT_SOURCE = `
   varying vec2 vUV;
   void main() {
     if (uUseTexture > 0.5) {
-      gl_FragColor = texture2D(uTexture, vUV);
+      gl_FragColor = texture2D(uTexture, vUV) * uColor;
     } else {
       gl_FragColor = uColor;
     }
@@ -72,11 +72,11 @@ export function createSpriteRenderer(gl, texture) {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
 
-  function drawSprite(x, y, width, height, cellIndex) {
+  function drawSprite(x, y, width, height, cellIndex, color = [1, 1, 1, 1]) {
     const u0 = cellIndex / ATLAS_CELL_COUNT;
     const u1 = (cellIndex + 1) / ATLAS_CELL_COUNT;
     const uv = new Float32Array([u0, 0, u0, 1, u1, 0, u1, 0, u0, 1, u1, 1]);
-    draw(toNDC(x, y, width, height), uv, true, [1, 1, 1, 1]);
+    draw(toNDC(x, y, width, height), uv, true, color);
   }
 
   function drawQuad(x, y, width, height, color) {

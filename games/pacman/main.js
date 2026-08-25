@@ -148,8 +148,15 @@ function render(gl) {
 window.addEventListener('keydown', (event) => {
   const direction = KEY_DIRECTIONS[event.key];
   if (direction) {
+    event.preventDefault(); // stop the browser's default scroll on Arrow keys
     player.setDesiredDirection(direction);
   }
+});
+
+document.querySelectorAll('.touch-btn[data-dir]').forEach((button) => {
+  button.addEventListener('pointerdown', () => {
+    player.setDesiredDirection(button.dataset.dir);
+  });
 });
 
 restartButtonEl.addEventListener('click', () => {

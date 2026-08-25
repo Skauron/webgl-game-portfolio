@@ -2,25 +2,71 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <title>Pacman — WebGL Portfolio</title>
     <style>
       html, body {
         margin: 0;
         height: 100%;
+        overflow: hidden;
         background: #000;
         font-family: sans-serif;
         color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       #game-container {
         position: relative;
-        width: 416px;
-        height: 352px;
-        margin: 40px auto;
+        width: min(90vw, calc(90vh * 416 / 352));
+        height: min(90vh, calc(90vw * 352 / 416));
+        touch-action: none;
       }
       canvas {
         display: block;
+        width: 100%;
+        height: 100%;
         background: #111;
+        image-rendering: pixelated;
       }
+      #touch-controls {
+        display: none;
+        position: fixed;
+        left: 16px;
+        bottom: 16px;
+        z-index: 10;
+      }
+      @media (pointer: coarse) {
+        #touch-controls {
+          display: block;
+        }
+      }
+      .dpad {
+        display: grid;
+        grid-template-columns: repeat(3, 56px);
+        grid-template-rows: repeat(3, 56px);
+        gap: 4px;
+      }
+      .touch-btn {
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.15);
+        color: #fff;
+        font-size: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .touch-btn:active {
+        background: rgba(255, 255, 255, 0.35);
+      }
+      .dpad-up { grid-column: 2; grid-row: 1; }
+      .dpad-left { grid-column: 1; grid-row: 2; }
+      .dpad-right { grid-column: 3; grid-row: 2; }
+      .dpad-down { grid-column: 2; grid-row: 3; }
       #hud {
         position: absolute;
         top: 8px;
@@ -61,6 +107,14 @@
       <div id="overlay">
         <div id="overlay-message"></div>
         <button id="restart-button">Restart</button>
+      </div>
+    </div>
+    <div id="touch-controls">
+      <div class="dpad">
+        <button class="touch-btn dpad-up" data-dir="up">▲</button>
+        <button class="touch-btn dpad-left" data-dir="left">◀</button>
+        <button class="touch-btn dpad-right" data-dir="right">▶</button>
+        <button class="touch-btn dpad-down" data-dir="down">▼</button>
       </div>
     </div>
     <script type="module" src="./main.js"></script>

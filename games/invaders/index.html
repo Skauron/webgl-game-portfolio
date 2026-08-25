@@ -2,24 +2,70 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <title>Space Invaders — WebGL Portfolio</title>
     <style>
       html, body {
         margin: 0;
         height: 100%;
+        overflow: hidden;
         background: #000;
         font-family: sans-serif;
         color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       #game-container {
         position: relative;
-        width: 480px;
-        height: 480px;
-        margin: 40px auto;
+        width: 90vmin;
+        height: 90vmin;
+        touch-action: none;
       }
       canvas {
         display: block;
+        width: 100%;
+        height: 100%;
         background: #050505;
+        image-rendering: pixelated;
+      }
+      #touch-controls {
+        display: none;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 16px;
+        padding: 0 16px;
+        justify-content: space-between;
+        align-items: flex-end;
+        z-index: 10;
+      }
+      @media (pointer: coarse) {
+        #touch-controls {
+          display: flex;
+        }
+      }
+      .touch-move {
+        display: flex;
+        gap: 8px;
+      }
+      .touch-btn {
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+        width: 56px;
+        height: 56px;
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.15);
+        color: #fff;
+        font-size: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .touch-btn:active {
+        background: rgba(255, 255, 255, 0.35);
       }
       #hud {
         position: absolute;
@@ -62,6 +108,13 @@
         <div id="overlay-message"></div>
         <button id="restart-button">Restart</button>
       </div>
+    </div>
+    <div id="touch-controls">
+      <div class="touch-move">
+        <button class="touch-btn" id="btn-left">◀</button>
+        <button class="touch-btn" id="btn-right">▶</button>
+      </div>
+      <button class="touch-btn" id="btn-fire">●</button>
     </div>
     <script type="module" src="./main.js"></script>
   </body>

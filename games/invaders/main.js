@@ -29,6 +29,11 @@ const ENEMY_FIRE_MAX_INTERVAL = 1.2;
 const MAX_ENEMY_BULLETS = 2;
 const ENEMY_BULLET_SPEED = 180;
 
+const PLAYER_HIT_FLASH_DURATION = 1.0;
+const PLAYER_HIT_FLASH_BLINK_RATE = 10; // toggles per second
+const PLAYER_HIT_FLASH_COLOR = [1.0, 0.2, 0.2, 1.0];
+const WHITE = [1.0, 1.0, 1.0, 1.0];
+
 const canvas = document.querySelector('#viewport');
 const scoreEl = document.querySelector('#score');
 const livesEl = document.querySelector('#lives');
@@ -45,6 +50,7 @@ let score;
 let lives;
 let state; // 'playing' | 'gameover' | 'victory'
 let enemyFireTimer;
+let hitFlashTimer;
 let drawSprite;
 let drawQuad;
 let engine;
@@ -63,6 +69,7 @@ function resetGame() {
   lives = 3;
   state = 'playing';
   enemyFireTimer = ENEMY_FIRE_MIN_INTERVAL;
+  hitFlashTimer = 0;
   overlayEl.classList.remove('visible');
   updateHud();
 }
@@ -149,6 +156,10 @@ function update(dt) {
   updatePlayer(player, dt);
   maybeEnemyFire(dt);
 
+  if (hitFlashTimer > 0) {
+    hitFlashTimer = Math.max(0, hitFlashTimer - dt);
+  }
+
   if (playerBullet) {
     const stillOnScreen = updateBullet(playerBullet, dt, CANVAS_SIZE);
     if (!stillOnScreen) playerBullet = null;
@@ -185,6 +196,7 @@ function update(dt) {
   if (hitByEnemy) {
     enemyBullets = enemyBullets.filter((bullet) => !rectsOverlap(bullet, playerRect));
     lives -= 1;
+    hitFlashTimer = PLAYER_HIT_FLASH_DURATION;
     updateHud();
     if (lives <= 0) {
       endGame('Game Over');
@@ -217,7 +229,10 @@ function render(gl) {
     }
   }
 
-  drawSprite(player.x, player.y, player.width, player.height, PLAYER_CELL);
+  const isFlashing =
+    hitFlashTimer > 0 && Math.floor(hitFlashTimer * PLAYER_HIT_FLASH_BLINK_RATE) % 2 === 0;
+  const playerColor = isFlashing ? PLAYER_HIT_FLASH_COLOR : WHITE;
+  drawSprite(player.x, player.y, player.width, player.height, PLAYER_CELL, playerColor);
 
   if (playerBullet) {
     drawSprite(playerBullet.x, playerBullet.y, playerBullet.width, playerBullet.height, PLAYER_BULLET_CELL);
@@ -227,7 +242,12 @@ function render(gl) {
   }
 }
 
+const GAME_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'a', 'd', ' ']);
+
 window.addEventListener('keydown', (event) => {
+  if (!GAME_KEYS.has(event.key)) return;
+  event.preventDefault(); // stop the browser's default scroll on Space/Arrow keys
+
   if (event.key === 'ArrowLeft' || event.key === 'a') player.moveDirection = -1;
   if (event.key === 'ArrowRight' || event.key === 'd') player.moveDirection = 1;
   if (event.key === ' ') {
@@ -248,6 +268,35 @@ window.addEventListener('keyup', (event) => {
 restartButtonEl.addEventListener('click', () => {
   resetGame();
   engine.start();
+});
+
+const leftButtonEl = document.querySelector('#btn-left');
+const rightButtonEl = document.querySelector('#btn-right');
+const fireButtonEl = document.querySelector('#btn-fire');
+
+leftButtonEl.addEventListener('pointerdown', () => {
+  player.moveDirection = -1;
+});
+leftButtonEl.addEventListener('pointerup', () => {
+  if (player.moveDirection === -1) player.moveDirection = 0;
+});
+leftButtonEl.addEventListener('pointerleave', () => {
+  if (player.moveDirection === -1) player.moveDirection = 0;
+});
+
+rightButtonEl.addEventListener('pointerdown', () => {
+  player.moveDirection = 1;
+});
+rightButtonEl.addEventListener('pointerup', () => {
+  if (player.moveDirection === 1) player.moveDirection = 0;
+});
+rightButtonEl.addEventListener('pointerleave', () => {
+  if (player.moveDirection === 1) player.moveDirection = 0;
+});
+
+fireButtonEl.addEventListener('pointerdown', () => {
+  const bullet = tryShoot(player, playerBullet !== null);
+  if (bullet) playerBullet = bullet;
 });
 
 resetGame();
