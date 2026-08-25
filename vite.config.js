@@ -10,6 +10,7 @@ export default defineConfig({
         demo: resolve(__dirname, 'games/demo/index.html'),
         pacman: resolve(__dirname, 'games/pacman/index.html'),
         invaders: resolve(__dirname, 'games/invaders/index.html'),
+        pong: resolve(__dirname, 'games/pong/index.html'),
       },
     },
   },
